@@ -1,0 +1,1471 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyOPynEGXqof7f+bNVnmHvkU",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/HANEOLPYTHON/Project/blob/main/%EB%B3%B4%ED%97%A4%EB%AF%B8%EC%95%88%20%EB%9E%A9%EC%86%8C%EB%94%94%20%EC%98%81%ED%99%94%20%EB%A6%AC%EB%B7%B0%20%EB%A1%9C%EC%A7%80%EC%8A%A4%ED%8B%B1%20%ED%9A%8C%EA%B7%80%20%ED%99%9C%EC%9A%A9%20%EA%B0%90%EC%A0%95%20%EB%B6%84%EC%84%9D\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "DihR2EfRItQt",
+        "outputId": "6dd2109d-a423-42bd-b476-104214162082"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Reading package lists... Done\n",
+            "Building dependency tree       \n",
+            "Reading state information... Done\n",
+            "fonts-nanum is already the newest version (20180306-3).\n",
+            "The following package was automatically installed and is no longer required:\n",
+            "  libnvidia-common-510\n",
+            "Use 'sudo apt autoremove' to remove it.\n",
+            "0 upgraded, 0 newly installed, 0 to remove and 27 not upgraded.\n",
+            "/usr/share/fonts: caching, new cache contents: 0 fonts, 1 dirs\n",
+            "/usr/share/fonts/truetype: caching, new cache contents: 0 fonts, 3 dirs\n",
+            "/usr/share/fonts/truetype/humor-sans: caching, new cache contents: 1 fonts, 0 dirs\n",
+            "/usr/share/fonts/truetype/liberation: caching, new cache contents: 16 fonts, 0 dirs\n",
+            "/usr/share/fonts/truetype/nanum: caching, new cache contents: 10 fonts, 0 dirs\n",
+            "/usr/local/share/fonts: caching, new cache contents: 0 fonts, 0 dirs\n",
+            "/root/.local/share/fonts: skipping, no such directory\n",
+            "/root/.fonts: skipping, no such directory\n",
+            "/usr/share/fonts/truetype: skipping, looped directory detected\n",
+            "/usr/share/fonts/truetype/humor-sans: skipping, looped directory detected\n",
+            "/usr/share/fonts/truetype/liberation: skipping, looped directory detected\n",
+            "/usr/share/fonts/truetype/nanum: skipping, looped directory detected\n",
+            "/var/cache/fontconfig: cleaning cache directory\n",
+            "/root/.cache/fontconfig: not cleaning non-existent cache directory\n",
+            "/root/.fontconfig: not cleaning non-existent cache directory\n",
+            "fc-cache: succeeded\n"
+          ]
+        }
+      ],
+      "source": [
+        "!sudo apt-get install -y fonts-nanum\n",
+        "!sudo fc-cache -fv\n",
+        "!rm ~/.cache/matplotlib -rf"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "# (로컬에서 실습할 경우) 파이토치 설치: conda install pytorch==1.12.0 -c pytorch \n",
+        "# (로컬에서 실습할 경우) torchtext 설치: conda install -c pytorch torchtext \n",
+        "\n",
+        "# 데이터 다운로드 \n",
+        "import torchtext \n",
+        "torchtext.utils.download_from_url(url='https://raw.githubusercontent.com/e9t/nsmc/master/ratings_train.txt', \n",
+        "                                  path=os.path.join(DATA_DIR, 'review.txt'))"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 36
+        },
+        "id": "Q9Rhnz-nI5Ap",
+        "outputId": "bf3943e0-4bfc-430f-ab30-1aa49c89b479"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "'/content/data/review.txt'"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "string"
+            }
+          },
+          "metadata": {},
+          "execution_count": 118
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "\n",
+        "import os, re\n",
+        "from tqdm import tqdm\n",
+        "\n",
+        "# 경고문구 미표시\n",
+        "import warnings\n",
+        "warnings.filterwarnings('ignore')\n",
+        "\n",
+        "# 한글 폰트 지정\n",
+        "import matplotlib.pyplot as plt\n",
+        "plt.rc('font', family='NanumBarunGothic')"
+      ],
+      "metadata": {
+        "id": "r3bhcKvhI5UP"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "DATA_DIR = \"./data\"\n",
+        "os.makedirs(DATA_DIR, exist_ok=True)"
+      ],
+      "metadata": {
+        "id": "5PeztWbFJ32D"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import torchtext \n",
+        "torchtext.utils.download_from_url(url='https://raw.githubusercontent.com/e9t/nsmc/master/ratings_train.txt', \n",
+        "                                  path=os.path.join(DATA_DIR, 'review.txt'))"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 36
+        },
+        "id": "GlD3HiNoKCZs",
+        "outputId": "f39999ed-e38a-48ef-e0d9-5126a888b24a"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "'/content/data/review.txt'"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "string"
+            }
+          },
+          "metadata": {},
+          "execution_count": 121
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# txt 파일을 판다스 데이터프레임으로 읽어오기\n",
+        "data = pd.read_csv(os.path.join(DATA_DIR, 'review.txt'), sep='\\t')\n",
+        "\n",
+        "# 데이터프레임의 크기\n",
+        "print(data.shape)\n",
+        "\n",
+        "# 첫 5행을 출력\n",
+        "data.head()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 224
+        },
+        "id": "pFtI6uGCI5ir",
+        "outputId": "94804f84-3307-477a-b145-aa0291597287"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "(150000, 3)\n"
+          ]
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "         id                                           document  label\n",
+              "0   9976970                                아 더빙.. 진짜 짜증나네요 목소리      0\n",
+              "1   3819312                  흠...포스터보고 초딩영화줄....오버연기조차 가볍지 않구나      1\n",
+              "2  10265843                                  너무재밓었다그래서보는것을추천한다      0\n",
+              "3   9045019                      교도소 이야기구먼 ..솔직히 재미는 없다..평점 조정      0\n",
+              "4   6483659  사이몬페그의 익살스런 연기가 돋보였던 영화!스파이더맨에서 늙어보이기만 했던 커스틴 ...      1"
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-e4603ad7-49ec-41bf-a96e-dd2d6d29d089\">\n",
+              "    <div class=\"colab-df-container\">\n",
+              "      <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>id</th>\n",
+              "      <th>document</th>\n",
+              "      <th>label</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>9976970</td>\n",
+              "      <td>아 더빙.. 진짜 짜증나네요 목소리</td>\n",
+              "      <td>0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>3819312</td>\n",
+              "      <td>흠...포스터보고 초딩영화줄....오버연기조차 가볍지 않구나</td>\n",
+              "      <td>1</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>10265843</td>\n",
+              "      <td>너무재밓었다그래서보는것을추천한다</td>\n",
+              "      <td>0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>9045019</td>\n",
+              "      <td>교도소 이야기구먼 ..솔직히 재미는 없다..평점 조정</td>\n",
+              "      <td>0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>6483659</td>\n",
+              "      <td>사이몬페그의 익살스런 연기가 돋보였던 영화!스파이더맨에서 늙어보이기만 했던 커스틴 ...</td>\n",
+              "      <td>1</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "      <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-e4603ad7-49ec-41bf-a96e-dd2d6d29d089')\"\n",
+              "              title=\"Convert this dataframe to an interactive table.\"\n",
+              "              style=\"display:none;\">\n",
+              "        \n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M0 0h24v24H0V0z\" fill=\"none\"/>\n",
+              "    <path d=\"M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z\"/><path d=\"M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z\"/>\n",
+              "  </svg>\n",
+              "      </button>\n",
+              "      \n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      flex-wrap:wrap;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "      <script>\n",
+              "        const buttonEl =\n",
+              "          document.querySelector('#df-e4603ad7-49ec-41bf-a96e-dd2d6d29d089 button.colab-df-convert');\n",
+              "        buttonEl.style.display =\n",
+              "          google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "        async function convertToInteractive(key) {\n",
+              "          const element = document.querySelector('#df-e4603ad7-49ec-41bf-a96e-dd2d6d29d089');\n",
+              "          const dataTable =\n",
+              "            await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                     [key], {});\n",
+              "          if (!dataTable) return;\n",
+              "\n",
+              "          const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "            '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "            + ' to learn more about interactive tables.';\n",
+              "          element.innerHTML = '';\n",
+              "          dataTable['output_type'] = 'display_data';\n",
+              "          await google.colab.output.renderOutput(dataTable, element);\n",
+              "          const docLink = document.createElement('div');\n",
+              "          docLink.innerHTML = docLinkHtml;\n",
+              "          element.appendChild(docLink);\n",
+              "        }\n",
+              "      </script>\n",
+              "    </div>\n",
+              "  </div>\n",
+              "  "
+            ]
+          },
+          "metadata": {},
+          "execution_count": 122
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "! pip install konlpy"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "2emt8qOqI5se",
+        "outputId": "f0d1e855-8543-4723-826f-dcbd8f285552"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Looking in indexes: https://pypi.org/simple, https://us-python.pkg.dev/colab-wheels/public/simple/\n",
+            "Requirement already satisfied: konlpy in /usr/local/lib/python3.8/dist-packages (0.6.0)\n",
+            "Requirement already satisfied: numpy>=1.6 in /usr/local/lib/python3.8/dist-packages (from konlpy) (1.21.6)\n",
+            "Requirement already satisfied: JPype1>=0.7.0 in /usr/local/lib/python3.8/dist-packages (from konlpy) (1.4.1)\n",
+            "Requirement already satisfied: lxml>=4.1.0 in /usr/local/lib/python3.8/dist-packages (from konlpy) (4.9.2)\n",
+            "Requirement already satisfied: packaging in /usr/local/lib/python3.8/dist-packages (from JPype1>=0.7.0->konlpy) (23.0)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 트위터 형태소 분석기(Okt)를 활용\n",
+        "from konlpy.utils import pprint\n",
+        "from konlpy.tag import Okt\n",
+        "okt = Okt()\n",
+        "print(okt)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "TFmqqBKzI5vL",
+        "outputId": "db7d252d-f5e7-4a6f-8298-d3d8187de235"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "<konlpy.tag._okt.Okt object at 0x7f2b250ef760>\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 누락 데이터를 제거\n",
+        "review_data = data['document'].dropna().values\n",
+        "\n",
+        "# 학습 속도를 고려하여, 1000개의 샘플을 선택하여 추출\n",
+        "review_data = review_data[:1000]\n",
+        "\n",
+        "# 배열의 크기\n",
+        "print(review_data.shape)\n",
+        "\n",
+        "# 첫 번째 데이터\n",
+        "print(review_data[0])"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "uVUqROz7I5zK",
+        "outputId": "5ec214d5-3708-460c-a712-99f2cf10fe7f"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "(1000,)\n",
+            "아 더빙.. 진짜 짜증나네요 목소리\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 세 글자 이상의 명사를 사용 (두 글자 이하의 단어는 제거)\n",
+        "cleaned_review_data = []\n",
+        "\n",
+        "for review in tqdm(review_data):\n",
+        "    tokens = okt.nouns(review)\n",
+        "    cleaned_tokens = []\n",
+        "    for word in tokens:\n",
+        "        if len(word) > 2:\n",
+        "            cleaned_tokens.append(word)\n",
+        "        else:\n",
+        "            pass\n",
+        "    cleaned_review = \" \".join(cleaned_tokens)\n",
+        "    cleaned_review_data.append(cleaned_review)\n",
+        "\n",
+        "print(len(cleaned_review_data))\n",
+        "print(cleaned_review_data[0])"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "1mHqr2GFI54Q",
+        "outputId": "a0ada310-f5f2-426a-e29f-121308bd1062"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "100%|██████████| 1000/1000 [00:04<00:00, 242.75it/s]"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "1000\n",
+            "목소리\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 사이킷런 패키지 활용 \n",
+        "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+        "\n",
+        "# TF-IDF 변환기 객체를 생성\n",
+        "tfid = TfidfVectorizer()\n",
+        "\n",
+        "# TF-IDF 변환기에 데이터를 입력하여 변환\n",
+        "review_tfid = tfid.fit_transform(cleaned_review_data)\n",
+        "\n",
+        "# 배열의 크기\n",
+        "print(review_tfid.shape)\n",
+        "\n",
+        "# 첫 번째 데이터\n",
+        "print(review_tfid[0])"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "qbV7EEjMI56y",
+        "outputId": "4ccf144d-3dac-4d2e-9a3b-87a3606b34b0"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "(1000, 597)\n",
+            "  (0, 152)\t1.0\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 단어 사전 확인 (딕셔너리 형태)\n",
+        "vocab = tfid.vocabulary_\n",
+        "\n",
+        "# 단어 사전의 크기\n",
+        "print(len(vocab))\n",
+        "\n",
+        "# 단어 사전 출력 (앞에서 5개의 단어만 출력)\n",
+        "print({ k:v for i, (k, v) in enumerate(vocab.items()) if i < 5 })"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "iO2euWhEI59I",
+        "outputId": "47a10af2-f0e9-43ba-c44c-5713f9d8574c"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "597\n",
+            "{'목소리': 152, '포스터': 546, '교도소': 31, '이야기': 400, '스파이더맨': 260}\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 단어들의 사전 인덱스를 이용하여 원래 단어를 검색하는 매핑 딕셔너리\n",
+        "index_to_word = { v:k for k, v in vocab.items() } \n",
+        "\n",
+        "# 앞에서 5개의 단어를 출력\n",
+        "print({  k:v for i, (k, v) in enumerate(index_to_word.items()) if i < 5 })"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "7n2hwgHzI5_4",
+        "outputId": "913012c5-ebcf-413a-ac81-887890a78c7b"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "{152: '목소리', 546: '포스터', 31: '교도소', 400: '이야기', 260: '스파이더맨'}\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 첫 번째 리뷰를 구성하는 단어들의 사전 인덱스를 이용하여 원래 단어를 복원 (순서 복원 X)\n",
+        "original_text = \" \".join([index_to_word[word_idx] for word_idx in review_tfid[0].indices])\n",
+        "original_text"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 36
+        },
+        "id": "DWsz_XZbI6CX",
+        "outputId": "074ac80e-f38d-4271-90cf-9f3be589baea"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "'목소리'"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "string"
+            }
+          },
+          "metadata": {},
+          "execution_count": 130
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 사이킷런 패키지 활용\n",
+        "from sklearn.decomposition import LatentDirichletAllocation\n",
+        "\n",
+        "# LDA 모델링 객체를 생성 (토픽 갯수를 2로 설정: 긍정/부정)\n",
+        "lda = LatentDirichletAllocation(n_components=2)  \n",
+        "\n",
+        "# TF-IDF 벡터를 입력하여 모델 학습 \n",
+        "lda.fit(review_tfid)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "HAMGQDtGK_0j",
+        "outputId": "b2f7caff-7df5-465e-b9b5-e72abb111527"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "LatentDirichletAllocation(n_components=2)"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 131
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 토픽 모델링 결과를 담고 있는 배열의 형태 : (2개의 토픽, 2157개의 단어)\n",
+        "print(lda.components_.shape)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "MNO0epqtK_31",
+        "outputId": "a4dfb6b3-de4f-4b49-f9b6-3cd403225425"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "(2, 597)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 2157개의 단어 중에서, 토픽 별로 가장 중요도가 높은 단어를 10개씩 출력\n",
+        "\n",
+        "for idx, topic in enumerate(lda.components_):\n",
+        "    print(f\"토픽 유형 {idx+1}:\", [(index_to_word[i], topic[i].round(3)) for i in topic.argsort()[:-11:-1]])"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "91K_1v4sK_7n",
+        "outputId": "1fdb77dd-dc1b-4c1b-faf7-d122e31e64df"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "토픽 유형 1: [('드라마', 19.518), ('스토리', 18.163), ('쓰레기', 15.716), ('이야기', 10.988), ('포스터', 6.354), ('캐스팅', 6.089), ('연기력', 5.41), ('시리즈', 4.888), ('비디오', 4.613), ('긴장감', 4.525)]\n",
+            "토픽 유형 2: [('주인공', 13.581), ('마지막', 9.611), ('스릴러', 5.128), ('시청률', 5.075), ('공포영화', 4.486), ('이영화', 4.319), ('어린이', 4.274), ('시나리오', 3.978), ('그대로', 3.796), ('갈수록', 3.575)]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# pyLDAvis 설치\n",
+        "!pip install pyLDAvis"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "fpcfrguOK_-9",
+        "outputId": "defa615d-98ee-4330-ac87-a4a4b1db94e9"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Looking in indexes: https://pypi.org/simple, https://us-python.pkg.dev/colab-wheels/public/simple/\n",
+            "Requirement already satisfied: pyLDAvis in /usr/local/lib/python3.8/dist-packages (3.3.1)\n",
+            "Requirement already satisfied: numpy>=1.20.0 in /usr/local/lib/python3.8/dist-packages (from pyLDAvis) (1.21.6)\n",
+            "Requirement already satisfied: sklearn in /usr/local/lib/python3.8/dist-packages (from pyLDAvis) (0.0.post1)\n",
+            "Requirement already satisfied: scipy in /usr/local/lib/python3.8/dist-packages (from pyLDAvis) (1.7.3)\n",
+            "Requirement already satisfied: jinja2 in /usr/local/lib/python3.8/dist-packages (from pyLDAvis) (2.11.3)\n",
+            "Requirement already satisfied: funcy in /usr/local/lib/python3.8/dist-packages (from pyLDAvis) (1.18)\n",
+            "Requirement already satisfied: numexpr in /usr/local/lib/python3.8/dist-packages (from pyLDAvis) (2.8.4)\n",
+            "Requirement already satisfied: setuptools in /usr/local/lib/python3.8/dist-packages (from pyLDAvis) (57.4.0)\n",
+            "Requirement already satisfied: joblib in /usr/local/lib/python3.8/dist-packages (from pyLDAvis) (1.2.0)\n",
+            "Requirement already satisfied: future in /usr/local/lib/python3.8/dist-packages (from pyLDAvis) (0.16.0)\n",
+            "Requirement already satisfied: pandas>=1.2.0 in /usr/local/lib/python3.8/dist-packages (from pyLDAvis) (1.3.5)\n",
+            "Requirement already satisfied: gensim in /usr/local/lib/python3.8/dist-packages (from pyLDAvis) (3.6.0)\n",
+            "Requirement already satisfied: scikit-learn in /usr/local/lib/python3.8/dist-packages (from pyLDAvis) (1.0.2)\n",
+            "Requirement already satisfied: python-dateutil>=2.7.3 in /usr/local/lib/python3.8/dist-packages (from pandas>=1.2.0->pyLDAvis) (2.8.2)\n",
+            "Requirement already satisfied: pytz>=2017.3 in /usr/local/lib/python3.8/dist-packages (from pandas>=1.2.0->pyLDAvis) (2022.7.1)\n",
+            "Requirement already satisfied: smart-open>=1.2.1 in /usr/local/lib/python3.8/dist-packages (from gensim->pyLDAvis) (6.3.0)\n",
+            "Requirement already satisfied: six>=1.5.0 in /usr/local/lib/python3.8/dist-packages (from gensim->pyLDAvis) (1.15.0)\n",
+            "Requirement already satisfied: MarkupSafe>=0.23 in /usr/local/lib/python3.8/dist-packages (from jinja2->pyLDAvis) (2.0.1)\n",
+            "Requirement already satisfied: threadpoolctl>=2.0.0 in /usr/local/lib/python3.8/dist-packages (from scikit-learn->pyLDAvis) (3.1.0)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# LDA 토픽 모델링 결과를 시각화\n",
+        "import pyLDAvis.sklearn\n",
+        "pyLDAvis.enable_notebook()\n",
+        "visualization = pyLDAvis.sklearn.prepare(lda, review_tfid, tfid)\n",
+        "pyLDAvis.display(visualization)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 880
+        },
+        "id": "KbPRbqt9LADi",
+        "outputId": "8acbe5d2-5df1-48e2-8a2a-aedf15710810"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "<IPython.core.display.HTML object>"
+            ],
+            "text/html": [
+              "\n",
+              "<link rel=\"stylesheet\" type=\"text/css\" href=\"https://cdn.jsdelivr.net/gh/bmabey/pyLDAvis@3.3.1/pyLDAvis/js/ldavis.v1.0.0.css\">\n",
+              "\n",
+              "\n",
+              "<div id=\"ldavis_el3791398232627345922592332503\"></div>\n",
+              "<script type=\"text/javascript\">\n",
+              "\n",
+              "var ldavis_el3791398232627345922592332503_data = {\"mdsDat\": {\"x\": [0.07899087777838819, -0.07899087777838819], \"y\": [0.0, 0.0], \"topics\": [1, 2], \"cluster\": [1, 1], \"Freq\": [50.00173613313103, 49.99826386686897]}, \"tinfo\": {\"Term\": [\"\\ub4dc\\ub77c\\ub9c8\", \"\\uc2a4\\ud1a0\\ub9ac\", \"\\uc4f0\\ub808\\uae30\", \"\\uc8fc\\uc778\\uacf5\", \"\\uc774\\uc57c\\uae30\", \"\\ub9c8\\uc9c0\\ub9c9\", \"\\ud3ec\\uc2a4\\ud130\", \"\\uce90\\uc2a4\\ud305\", \"\\uc5f0\\uae30\\ub825\", \"\\uc2dc\\uccad\\ub960\", \"\\uc2a4\\ub9b4\\ub7ec\", \"\\uc2dc\\ub9ac\\uc988\", \"\\ube44\\ub514\\uc624\", \"\\uacf5\\ud3ec\\uc601\\ud654\", \"\\uae34\\uc7a5\\uac10\", \"\\ub85c\\ub9e8\\uc2a4\", \"\\uc774\\uc601\\ud654\", \"\\uc5b4\\ub9b0\\uc774\", \"\\ucf54\\ubbf8\\ub514\", \"\\uc2dc\\ub098\\ub9ac\\uc624\", \"\\uadf8\\ub300\\ub85c\", \"\\uac08\\uc218\\ub85d\", \"\\ud654\\uc774\\ud305\", \"\\ucd5c\\uace0\\ub2e4\", \"\\uc5ec\\ubc30\\uc6b0\", \"\\ud55c\\uad6d\\uc601\", \"\\uc5f0\\uc608\\uacc4\", \"\\ud55c\\ub9c8\\ub514\", \"\\ub124\\uc774\\ubc84\", \"\\uc6b0\\ub9ac\\ub098\\ub77c\", \"\\ub4dc\\ub77c\\ub9c8\", \"\\uc2a4\\ud1a0\\ub9ac\", \"\\uc4f0\\ub808\\uae30\", \"\\uc774\\uc57c\\uae30\", \"\\uce90\\uc2a4\\ud305\", \"\\ud3ec\\uc2a4\\ud130\", \"\\uc5f0\\uae30\\ub825\", \"\\ube44\\ub514\\uc624\", \"\\uae34\\uc7a5\\uac10\", \"\\uc2dc\\ub9ac\\uc988\", \"\\ub85c\\ub9e8\\uc2a4\", \"\\ucf54\\ubbf8\\ub514\", \"\\ud654\\uc774\\ud305\", \"\\ud55c\\uad6d\\uc601\", \"\\ubab0\\uc785\\ub3c4\", \"\\uc6b0\\ub9ac\\ub098\\ub77c\", \"\\uadf9\\uc7a5\\ud310\", \"\\uc54c\\ubc14\\uc0dd\", \"\\uc138\\ub974\\uac8c\\uc774\", \"\\ubd23\\ub294\\ub370\", \"\\ucf00\\uc774\\ube14\", \"\\uac00\\uc2b4\\uc18d\", \"\\uc544\\ubb34\\ub098\", \"\\uc561\\uc158\\uc601\\ud654\", \"\\uc81c\\ub300\\ub85c\", \"\\ud765\\ubbf8\\uc9c4\\uc9c4\", \"\\ud5d0\\ub9ac\\uc6b0\\ub4dc\", \"\\uad70\\ub354\\ub354\\uae30\", \"\\uc601\\ud654\\uc0ac\", \"\\uc9dc\\uc784\\uc0c8\", \"\\ub9c8\\uc9c0\\ub9c9\", \"\\uc8fc\\uc778\\uacf5\", \"\\uc2dc\\uccad\\ub960\", \"\\uacf5\\ud3ec\\uc601\\ud654\", \"\\uc2a4\\ub9b4\\ub7ec\", \"\\uc5b4\\ub9b0\\uc774\", \"\\uc774\\uc601\\ud654\", \"\\uc2dc\\ub098\\ub9ac\\uc624\", \"\\uadf8\\ub300\\ub85c\", \"\\uac08\\uc218\\ub85d\", \"\\ucd5c\\uace0\\ub2e4\", \"\\uc5ec\\ubc30\\uc6b0\", \"\\uc5f0\\uc608\\uacc4\", \"\\ud55c\\ub9c8\\ub514\", \"\\ub124\\uc774\\ubc84\", \"\\uc9c0\\ub8e8\\ud568\", \"\\ub204\\uad70\\uac00\", \"\\uc11c\\uc2a4\\ud39c\\uc2a4\", \"\\uce90\\ub9ad\\ud130\", \"\\uc601\\ud654\\uad00\", \"\\uc544\\uc800\\uc528\", \"\\ucd08\\ub4f1\\ud559\\uad50\", \"\\uc5bc\\ub9c8\\ub098\", \"\\ubd84\\uc704\\uae30\", \"\\uc678\\uacc4\\uc778\", \"\\uc2f8\\uad6c\\ub824\", \"\\ub808\\uc804\\ub4dc\", \"\\ubc1c\\uc5f0\\uae30\", \"\\uc2dc\\uc885\\uc77c\\uad00\", \"\\uc2f8\\uc774\\ucf54\", \"\\uc5f0\\uc608\\uc778\", \"\\uc5d0\\ud53c\\uc18c\\ub4dc\"], \"Freq\": [10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 3.0, 3.0, 3.0, 2.0, 3.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 2.0, 10.248727436949459, 9.53739510594529, 8.252594328121475, 5.769591139559561, 3.197279070234823, 3.3365465109817767, 2.8410021632695597, 2.4222581212296426, 2.375926796200936, 2.566937021407719, 2.337846684433827, 2.1717708585786757, 1.8964496084097684, 1.7214584337813088, 1.6671480295901244, 1.7396446250241366, 1.3965128466877212, 1.3007728362282622, 1.3007727668405134, 1.3007726341612846, 1.30077226156103, 1.3007721727072497, 1.3007720127852238, 1.246589472117051, 1.1679218160757092, 1.1484331750507695, 1.1484083089491057, 1.1466643273012296, 1.1373221035074272, 1.1048108086912112, 5.120530117752503, 7.23560991105841, 2.7040413055904136, 2.390338584978725, 2.731925955140433, 2.277350698866112, 2.30100697714417, 2.1194945758573795, 2.0225297249488317, 1.9046961106362241, 1.8533394772065936, 1.7505333900962095, 1.698131244152399, 1.6964954352490103, 1.689914124107185, 1.6327618251709806, 1.6038639923826756, 1.6083554696795677, 1.5552475592719928, 1.5153059865173657, 1.5144907854129288, 1.6976667868002449, 1.3997001310229784, 1.351254516902925, 1.2595536358009933, 1.231260651752521, 1.3787429648452207, 1.2112608803603546, 1.1802247995735728, 1.1854728576230416, 1.2790459624259156, 1.2109485977405918], \"Total\": [10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 3.0, 3.0, 3.0, 2.0, 3.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 2.0, 10.533510206365577, 9.859216918277376, 8.540471445948633, 6.063094080141204, 3.4739246740871352, 3.63084158846345, 3.1342343958560526, 2.703663232723528, 2.6523603340043573, 2.870666128305565, 2.6223631148795863, 2.4480832070624965, 2.1733487284698003, 1.9987206563589814, 1.964415375722571, 2.056570806765773, 1.671435012110342, 1.5793150297698948, 1.579315030785994, 1.5793150327289198, 1.5793150381851966, 1.5793150394863518, 1.5793150418282154, 1.5215696549981008, 1.4448416777621407, 1.4254959381933805, 1.425496302327159, 1.42552184081466, 1.4146148997453252, 1.3814674606784587, 5.401487996449894, 7.639796742515635, 2.9871703331813073, 2.662456119718547, 3.0495475214887695, 2.550358230458297, 2.5804462933610224, 2.3902988977561246, 2.2951534472625514, 2.1759734229611802, 2.127141521080365, 2.026433016582841, 1.971103748276644, 1.9702007289199563, 1.9628889363124173, 1.905481720212704, 1.8755272972315618, 1.8813064155750263, 1.8244088604469528, 1.7873894928742273, 1.7873777275358151, 2.007382005614863, 1.6715023148945525, 1.6286852469736517, 1.5323820424457835, 1.5011337435202092, 1.6821075341065987, 1.480874107706561, 1.4498584231990779, 1.4579543114468454, 1.5832684346042947, 1.513765767590356], \"Category\": [\"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Default\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic1\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\", \"Topic2\"], \"logprob\": [30.0, 29.0, 28.0, 27.0, 26.0, 25.0, 24.0, 23.0, 22.0, 21.0, 20.0, 19.0, 18.0, 17.0, 16.0, 15.0, 14.0, 13.0, 12.0, 11.0, 10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, -3.4874, -3.5594, -3.7041, -4.062, -4.6523, -4.6097, -4.7704, -4.9299, -4.9492, -4.8719, -4.9654, -5.0391, -5.1746, -5.2714, -5.3035, -5.2609, -5.4806, -5.5516, -5.5516, -5.5516, -5.5516, -5.5516, -5.5516, -5.5942, -5.6594, -5.6762, -5.6762, -5.6777, -5.6859, -5.7149, -4.1813, -3.8355, -4.8198, -4.9431, -4.8095, -4.9915, -4.9812, -5.0633, -5.1102, -5.1702, -5.1975, -5.2546, -5.285, -5.286, -5.2898, -5.3243, -5.3421, -5.3393, -5.3729, -5.3989, -5.3994, -5.2853, -5.4783, -5.5135, -5.5838, -5.6065, -5.4934, -5.6229, -5.6488, -5.6444, -5.5684, -5.6231], \"loglift\": [30.0, 29.0, 28.0, 27.0, 26.0, 25.0, 24.0, 23.0, 22.0, 21.0, 20.0, 19.0, 18.0, 17.0, 16.0, 15.0, 14.0, 13.0, 12.0, 11.0, 10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.6657, 0.6599, 0.6588, 0.6435, 0.6101, 0.6086, 0.5949, 0.5832, 0.5831, 0.5813, 0.5783, 0.5734, 0.5568, 0.5438, 0.529, 0.5258, 0.5134, 0.4991, 0.4991, 0.4991, 0.4991, 0.4991, 0.4991, 0.4938, 0.4803, 0.477, 0.477, 0.4754, 0.4749, 0.4696, 0.6398, 0.6388, 0.5936, 0.5854, 0.5832, 0.58, 0.5786, 0.5729, 0.5667, 0.56, 0.5554, 0.5468, 0.5441, 0.5436, 0.5434, 0.5387, 0.5367, 0.5364, 0.5336, 0.528, 0.5275, 0.5256, 0.5157, 0.5064, 0.4971, 0.495, 0.4943, 0.4922, 0.4874, 0.4863, 0.4798, 0.47]}, \"token.table\": {\"Topic\": [1, 2, 2, 1, 2, 1, 1, 2, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 2, 2, 2, 1, 1, 2, 1, 1, 2, 2, 2, 2, 1, 2, 2, 2, 1, 2, 1, 1, 2, 1, 2, 2, 1, 2, 2, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1], \"Freq\": [0.6331858907170509, 0.9191288730348065, 0.7511860891106156, 0.7014974947199112, 0.8714014317366957, 0.5982882928468796, 0.7540453589051126, 1.018906349208581, 1.0663667774668866, 0.9493511473465732, 0.5944923137931964, 0.7626708859088861, 0.9256708527883853, 1.0181146129872558, 0.675276848177666, 0.6331858934262701, 0.6139921767316024, 0.7397371003138232, 1.0630910432465062, 0.6331858942052364, 0.9837525006120972, 1.0142793370801726, 0.8367154425237301, 1.0450536098291499, 0.6897225163499233, 1.0042949230836224, 0.6661631612217085, 0.6858925496832747, 0.9367164389730478, 0.6331858897781407, 1.118957660257588, 0.6331858946126153, 0.6572160510136147, 0.7842035585881603, 0.5982642028605778, 0.6606041842205356, 0.9869558893057246, 0.9571715516766929, 1.014659934439585, 0.6316048360112285, 1.1189502948145245, 0.7069061694317169, 0.652578777550756, 0.9724926530223688, 0.9895937487844927, 0.7750597271276695, 0.6921173547186577, 0.9162547428840413, 1.0496033516274013, 0.723867936425289, 0.9963225705948271, 0.9402289317281577, 1.0962454981226248, 0.8635765831014539, 0.6331858912387157, 0.8169656955409778, 0.8262547199889217, 1.0006400812624556, 1.0151249924145442, 0.7015100624024591, 0.9202388801212539, 0.7015102415986972], \"Term\": [\"\\uac00\\uc2b4\\uc18d\", \"\\uac08\\uc218\\ub85d\", \"\\uacf5\\ud3ec\\uc601\\ud654\", \"\\uad70\\ub354\\ub354\\uae30\", \"\\uadf8\\ub300\\ub85c\", \"\\uadf9\\uc7a5\\ud310\", \"\\uae34\\uc7a5\\uac10\", \"\\ub124\\uc774\\ubc84\", \"\\ub204\\uad70\\uac00\", \"\\ub4dc\\ub77c\\ub9c8\", \"\\ub808\\uc804\\ub4dc\", \"\\ub85c\\ub9e8\\uc2a4\", \"\\ub9c8\\uc9c0\\ub9c9\", \"\\ubab0\\uc785\\ub3c4\", \"\\ubc1c\\uc5f0\\uae30\", \"\\ubd23\\ub294\\ub370\", \"\\ubd84\\uc704\\uae30\", \"\\ube44\\ub514\\uc624\", \"\\uc11c\\uc2a4\\ud39c\\uc2a4\", \"\\uc138\\ub974\\uac8c\\uc774\", \"\\uc2a4\\ub9b4\\ub7ec\", \"\\uc2a4\\ud1a0\\ub9ac\", \"\\uc2dc\\ub098\\ub9ac\\uc624\", \"\\uc2dc\\ub9ac\\uc988\", \"\\uc2dc\\uc885\\uc77c\\uad00\", \"\\uc2dc\\uccad\\ub960\", \"\\uc2f8\\uad6c\\ub824\", \"\\uc2f8\\uc774\\ucf54\", \"\\uc4f0\\ub808\\uae30\", \"\\uc544\\ubb34\\ub098\", \"\\uc544\\uc800\\uc528\", \"\\uc54c\\ubc14\\uc0dd\", \"\\uc561\\uc158\\uc601\\ud654\", \"\\uc5b4\\ub9b0\\uc774\", \"\\uc5bc\\ub9c8\\ub098\", \"\\uc5d0\\ud53c\\uc18c\\ub4dc\", \"\\uc5ec\\ubc30\\uc6b0\", \"\\uc5f0\\uae30\\ub825\", \"\\uc5f0\\uc608\\uacc4\", \"\\uc5f0\\uc608\\uc778\", \"\\uc601\\ud654\\uad00\", \"\\uc601\\ud654\\uc0ac\", \"\\uc678\\uacc4\\uc778\", \"\\uc6b0\\ub9ac\\ub098\\ub77c\", \"\\uc774\\uc57c\\uae30\", \"\\uc774\\uc601\\ud654\", \"\\uc81c\\ub300\\ub85c\", \"\\uc8fc\\uc778\\uacf5\", \"\\uc9c0\\ub8e8\\ud568\", \"\\uc9dc\\uc784\\uc0c8\", \"\\ucd08\\ub4f1\\ud559\\uad50\", \"\\ucd5c\\uace0\\ub2e4\", \"\\uce90\\ub9ad\\ud130\", \"\\uce90\\uc2a4\\ud305\", \"\\ucf00\\uc774\\ube14\", \"\\ucf54\\ubbf8\\ub514\", \"\\ud3ec\\uc2a4\\ud130\", \"\\ud55c\\uad6d\\uc601\", \"\\ud55c\\ub9c8\\ub514\", \"\\ud5d0\\ub9ac\\uc6b0\\ub4dc\", \"\\ud654\\uc774\\ud305\", \"\\ud765\\ubbf8\\uc9c4\\uc9c4\"]}, \"R\": 30, \"lambda.step\": 0.01, \"plot.opts\": {\"xlab\": \"PC1\", \"ylab\": \"PC2\"}, \"topic.order\": [1, 2]};\n",
+              "\n",
+              "function LDAvis_load_lib(url, callback){\n",
+              "  var s = document.createElement('script');\n",
+              "  s.src = url;\n",
+              "  s.async = true;\n",
+              "  s.onreadystatechange = s.onload = callback;\n",
+              "  s.onerror = function(){console.warn(\"failed to load library \" + url);};\n",
+              "  document.getElementsByTagName(\"head\")[0].appendChild(s);\n",
+              "}\n",
+              "\n",
+              "if(typeof(LDAvis) !== \"undefined\"){\n",
+              "   // already loaded: just create the visualization\n",
+              "   !function(LDAvis){\n",
+              "       new LDAvis(\"#\" + \"ldavis_el3791398232627345922592332503\", ldavis_el3791398232627345922592332503_data);\n",
+              "   }(LDAvis);\n",
+              "}else if(typeof define === \"function\" && define.amd){\n",
+              "   // require.js is available: use it to load d3/LDAvis\n",
+              "   require.config({paths: {d3: \"https://d3js.org/d3.v5\"}});\n",
+              "   require([\"d3\"], function(d3){\n",
+              "      window.d3 = d3;\n",
+              "      LDAvis_load_lib(\"https://cdn.jsdelivr.net/gh/bmabey/pyLDAvis@3.3.1/pyLDAvis/js/ldavis.v3.0.0.js\", function(){\n",
+              "        new LDAvis(\"#\" + \"ldavis_el3791398232627345922592332503\", ldavis_el3791398232627345922592332503_data);\n",
+              "      });\n",
+              "    });\n",
+              "}else{\n",
+              "    // require.js not available: dynamically load d3 & LDAvis\n",
+              "    LDAvis_load_lib(\"https://d3js.org/d3.v5.js\", function(){\n",
+              "         LDAvis_load_lib(\"https://cdn.jsdelivr.net/gh/bmabey/pyLDAvis@3.3.1/pyLDAvis/js/ldavis.v3.0.0.js\", function(){\n",
+              "                 new LDAvis(\"#\" + \"ldavis_el3791398232627345922592332503\", ldavis_el3791398232627345922592332503_data);\n",
+              "            })\n",
+              "         });\n",
+              "}\n",
+              "</script>"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 135
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "labels = data['label'].iloc[:1000].values\n",
+        "print(labels.shape)\n",
+        "print(labels[:5])"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "3KWW3-jkLAIH",
+        "outputId": "4d873f4c-ac28-401f-ddd5-890aa8274954"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "(1000,)\n",
+            "[0 1 0 0 1]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 사이킷런 패키지 활용\n",
+        "from sklearn.linear_model import LogisticRegression\n",
+        "\n",
+        "# 로지스틱 분류 모델링 객체를 생성 \n",
+        "lr = LogisticRegression()\n",
+        "\n",
+        "# TF-IDF 벡터를 입력하여 모델 학습 \n",
+        "lr.fit(review_tfid, labels)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "3ezMUkbMLAL5",
+        "outputId": "49689441-89d5-4fa9-9713-21a52d33ebad"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "LogisticRegression()"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 137
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 첫 번째 샘플을 이용하여 모델 예측\n",
+        "pred = lr.predict(review_tfid[0])\n",
+        "print(pred)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "X-gALmWFLAOw",
+        "outputId": "76348458-1b61-4ace-ae55-3cb2114a53bf"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[0]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 판다스 데이터프레임로 읽어오기\n",
+        "test = pd.read_csv('naver_review.csv')\n",
+        "\n",
+        "test.head()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 354
+        },
+        "id": "i3iu2QYELAR1",
+        "outputId": "8df0817a-20b1-4bbf-c6f0-a899dd3de20d"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "   Unnamed: 0                                           title      user  \\\n",
+              "0           0                         영화 보헤미안 랩소디, 퀸, 프레디 머큐리  k8mr****   \n",
+              "1           1                                    이 영화 - 퀸 = 0  arti****   \n",
+              "2           2                                  보헤미안 랩소디 영화 잡담  wait****   \n",
+              "3           3             영화 보헤미안 랩소디 후기, 프레디머큐리와 퀸에 관련한 실화..  sus8****   \n",
+              "4           4  아! 너무 달라! 너무 빈해 보여! 프레디 삼촌은 절대 저런 모습 아니였는데....  denp****   \n",
+              "\n",
+              "                                              review  \n",
+              "0  \\n\\n영화 보헤미안 랩소디를 아이맥스 스크린을 통해 관람했다. 실제 콘서트 현장에...  \n",
+              "1  \\n이 영화 - 퀸 = 0퀸이 아니었다면 볼 리도 없었겠지만 퀸이라 봤다. 퀸이니까...  \n",
+              "2  \\n   이 영화를 보기 전, 기대치를 최대한 낮추었다. \"이 영화는 분명히 형편없...  \n",
+              "3  \\n영화 보헤미안 랩소디 후기, 프레디모큐리와 퀸에 관련한 실화..   퀸을 좋아하...  \n",
+              "4  \\n프레디 삼촌. 절대 저 모습이 아니었어.85년 Live Aid공연 모습인듯 한데...  "
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-80d4699c-d7df-4461-9665-3071a3e1402f\">\n",
+              "    <div class=\"colab-df-container\">\n",
+              "      <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>Unnamed: 0</th>\n",
+              "      <th>title</th>\n",
+              "      <th>user</th>\n",
+              "      <th>review</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>0</td>\n",
+              "      <td>영화 보헤미안 랩소디, 퀸, 프레디 머큐리</td>\n",
+              "      <td>k8mr****</td>\n",
+              "      <td>\\n\\n영화 보헤미안 랩소디를 아이맥스 스크린을 통해 관람했다. 실제 콘서트 현장에...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>1</td>\n",
+              "      <td>이 영화 - 퀸 = 0</td>\n",
+              "      <td>arti****</td>\n",
+              "      <td>\\n이 영화 - 퀸 = 0퀸이 아니었다면 볼 리도 없었겠지만 퀸이라 봤다. 퀸이니까...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>2</td>\n",
+              "      <td>보헤미안 랩소디 영화 잡담</td>\n",
+              "      <td>wait****</td>\n",
+              "      <td>\\n   이 영화를 보기 전, 기대치를 최대한 낮추었다. \"이 영화는 분명히 형편없...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>3</td>\n",
+              "      <td>영화 보헤미안 랩소디 후기, 프레디머큐리와 퀸에 관련한 실화..</td>\n",
+              "      <td>sus8****</td>\n",
+              "      <td>\\n영화 보헤미안 랩소디 후기, 프레디모큐리와 퀸에 관련한 실화..   퀸을 좋아하...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>4</td>\n",
+              "      <td>아! 너무 달라! 너무 빈해 보여! 프레디 삼촌은 절대 저런 모습 아니였는데....</td>\n",
+              "      <td>denp****</td>\n",
+              "      <td>\\n프레디 삼촌. 절대 저 모습이 아니었어.85년 Live Aid공연 모습인듯 한데...</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "      <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-80d4699c-d7df-4461-9665-3071a3e1402f')\"\n",
+              "              title=\"Convert this dataframe to an interactive table.\"\n",
+              "              style=\"display:none;\">\n",
+              "        \n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M0 0h24v24H0V0z\" fill=\"none\"/>\n",
+              "    <path d=\"M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z\"/><path d=\"M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z\"/>\n",
+              "  </svg>\n",
+              "      </button>\n",
+              "      \n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      flex-wrap:wrap;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "      <script>\n",
+              "        const buttonEl =\n",
+              "          document.querySelector('#df-80d4699c-d7df-4461-9665-3071a3e1402f button.colab-df-convert');\n",
+              "        buttonEl.style.display =\n",
+              "          google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "        async function convertToInteractive(key) {\n",
+              "          const element = document.querySelector('#df-80d4699c-d7df-4461-9665-3071a3e1402f');\n",
+              "          const dataTable =\n",
+              "            await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                     [key], {});\n",
+              "          if (!dataTable) return;\n",
+              "\n",
+              "          const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "            '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "            + ' to learn more about interactive tables.';\n",
+              "          element.innerHTML = '';\n",
+              "          dataTable['output_type'] = 'display_data';\n",
+              "          await google.colab.output.renderOutput(dataTable, element);\n",
+              "          const docLink = document.createElement('div');\n",
+              "          docLink.innerHTML = docLinkHtml;\n",
+              "          element.appendChild(docLink);\n",
+              "        }\n",
+              "      </script>\n",
+              "    </div>\n",
+              "  </div>\n",
+              "  "
+            ]
+          },
+          "metadata": {},
+          "execution_count": 139
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "# 판다스 데이터프레임로 읽어오기\n",
+        "test = pd.read_csv('naver_review.csv')\n",
+        "\n",
+        "test.head()\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 354
+        },
+        "id": "SCVhrShXLAUZ",
+        "outputId": "c1c85dbe-dbd0-4a1e-d756-a64e47c614b1"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "   Unnamed: 0                                           title      user  \\\n",
+              "0           0                         영화 보헤미안 랩소디, 퀸, 프레디 머큐리  k8mr****   \n",
+              "1           1                                    이 영화 - 퀸 = 0  arti****   \n",
+              "2           2                                  보헤미안 랩소디 영화 잡담  wait****   \n",
+              "3           3             영화 보헤미안 랩소디 후기, 프레디머큐리와 퀸에 관련한 실화..  sus8****   \n",
+              "4           4  아! 너무 달라! 너무 빈해 보여! 프레디 삼촌은 절대 저런 모습 아니였는데....  denp****   \n",
+              "\n",
+              "                                              review  \n",
+              "0  \\n\\n영화 보헤미안 랩소디를 아이맥스 스크린을 통해 관람했다. 실제 콘서트 현장에...  \n",
+              "1  \\n이 영화 - 퀸 = 0퀸이 아니었다면 볼 리도 없었겠지만 퀸이라 봤다. 퀸이니까...  \n",
+              "2  \\n   이 영화를 보기 전, 기대치를 최대한 낮추었다. \"이 영화는 분명히 형편없...  \n",
+              "3  \\n영화 보헤미안 랩소디 후기, 프레디모큐리와 퀸에 관련한 실화..   퀸을 좋아하...  \n",
+              "4  \\n프레디 삼촌. 절대 저 모습이 아니었어.85년 Live Aid공연 모습인듯 한데...  "
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-00ad4554-5090-44b5-871a-43cde9de0c6a\">\n",
+              "    <div class=\"colab-df-container\">\n",
+              "      <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>Unnamed: 0</th>\n",
+              "      <th>title</th>\n",
+              "      <th>user</th>\n",
+              "      <th>review</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>0</td>\n",
+              "      <td>영화 보헤미안 랩소디, 퀸, 프레디 머큐리</td>\n",
+              "      <td>k8mr****</td>\n",
+              "      <td>\\n\\n영화 보헤미안 랩소디를 아이맥스 스크린을 통해 관람했다. 실제 콘서트 현장에...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>1</td>\n",
+              "      <td>이 영화 - 퀸 = 0</td>\n",
+              "      <td>arti****</td>\n",
+              "      <td>\\n이 영화 - 퀸 = 0퀸이 아니었다면 볼 리도 없었겠지만 퀸이라 봤다. 퀸이니까...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>2</td>\n",
+              "      <td>보헤미안 랩소디 영화 잡담</td>\n",
+              "      <td>wait****</td>\n",
+              "      <td>\\n   이 영화를 보기 전, 기대치를 최대한 낮추었다. \"이 영화는 분명히 형편없...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>3</td>\n",
+              "      <td>영화 보헤미안 랩소디 후기, 프레디머큐리와 퀸에 관련한 실화..</td>\n",
+              "      <td>sus8****</td>\n",
+              "      <td>\\n영화 보헤미안 랩소디 후기, 프레디모큐리와 퀸에 관련한 실화..   퀸을 좋아하...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>4</td>\n",
+              "      <td>아! 너무 달라! 너무 빈해 보여! 프레디 삼촌은 절대 저런 모습 아니였는데....</td>\n",
+              "      <td>denp****</td>\n",
+              "      <td>\\n프레디 삼촌. 절대 저 모습이 아니었어.85년 Live Aid공연 모습인듯 한데...</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "      <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-00ad4554-5090-44b5-871a-43cde9de0c6a')\"\n",
+              "              title=\"Convert this dataframe to an interactive table.\"\n",
+              "              style=\"display:none;\">\n",
+              "        \n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M0 0h24v24H0V0z\" fill=\"none\"/>\n",
+              "    <path d=\"M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z\"/><path d=\"M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z\"/>\n",
+              "  </svg>\n",
+              "      </button>\n",
+              "      \n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      flex-wrap:wrap;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "      <script>\n",
+              "        const buttonEl =\n",
+              "          document.querySelector('#df-00ad4554-5090-44b5-871a-43cde9de0c6a button.colab-df-convert');\n",
+              "        buttonEl.style.display =\n",
+              "          google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "        async function convertToInteractive(key) {\n",
+              "          const element = document.querySelector('#df-00ad4554-5090-44b5-871a-43cde9de0c6a');\n",
+              "          const dataTable =\n",
+              "            await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                     [key], {});\n",
+              "          if (!dataTable) return;\n",
+              "\n",
+              "          const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "            '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "            + ' to learn more about interactive tables.';\n",
+              "          element.innerHTML = '';\n",
+              "          dataTable['output_type'] = 'display_data';\n",
+              "          await google.colab.output.renderOutput(dataTable, element);\n",
+              "          const docLink = document.createElement('div');\n",
+              "          docLink.innerHTML = docLinkHtml;\n",
+              "          element.appendChild(docLink);\n",
+              "        }\n",
+              "      </script>\n",
+              "    </div>\n",
+              "  </div>\n",
+              "  "
+            ]
+          },
+          "metadata": {},
+          "execution_count": 140
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 첫 번째 리뷰를 선택\n",
+        "test_sample = test['review'][0]\n",
+        "test_sample"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 297
+        },
+        "id": "ogz1Ho21LAXG",
+        "outputId": "0725b306-885b-48dc-9e05-35b0ccc5493b"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "'\\n\\n영화 보헤미안 랩소디를 아이맥스 스크린을 통해 관람했다. 실제 콘서트 현장에 있는 듯한 기분이 들 정도로 생생한 분위기와 현장감을 담은 공연 장면의 열기가\\xa0 아이맥스\\xa0스크린을 통해서 더욱 극대화되는 느낌이 들었다.음악의 꿈을 키우며 공항에서 인부로 일하다가전설의 록 밴드가 된 프레디 머큐리와 퀸의 독창적인 음악과 화려한 무대 그리고 그들의 진짜 이야기를 담은 영화이다. \\xa0‘퀸’의 명곡과 더불어 메인 보컬 ‘프레디 머큐리’의 화려한 무대를 아이맥스 스크린로 완벽하게 담아냈다. 영화 내내 퀸의 라이브공연을 보고 있는 것 같은 착각이 들 정도로 영상과 음악의 조화가 잘 이루어진 영화이다.영화의 하이라이트는 마지막 장면의 라이브에이드 공연이다.라이브 에이드에서는 퀸의 모든것을 보여주고 영화를 마무리 한다.보헤미안 랩소디 영화에서 다루지않은 프레디머큐리의 출생과 삶에 대한 이야기를 추가하려한다.영화를 보지 않았거나 본 관객들도 알고 나면 더욱 프레디 머큐리 삶에 대한 이해를 넓힐 수 있을 것이다.아프리카 탄자니아의 잔지바르 섬에서 태어난 프레디 머큐리프레디 머큐리는 1946년 영국의 식민지였던 잔지바르에서 영국 총독부 공무원의 1남 1녀 중 장남으로 태어났다. 어릴 적 이름은 \\'파로크 불사라\\'였다. 집안이나 이름, 외모 등을 볼 때 전형적인 영국인은 아니었다. 그의 아버지는 인도 국적을 가졌으며 오래 전 8세기에 이슬람교 교도에 쫓겨 인도로 피신한 페르시아인 조로아스터교 신자의 후손이었다. \\n 어린 시절을 잔지바르에서 보낸 프레디 머큐리는 아버지의 뜻에 따라 인도의 뭄바이로 가서 10년간 기숙학교에 다녔으며 이때부터 영어 프레드릭의 애칭인 프레디라는 이름을 사용했다. 학창시절 프레디는 친구들과 밴드를 결성하였는데 당시에는 리드 보컬을 맡지 않고 키보드를 연주했다.1964년에 잔지바르에서 아랍인과 인도인을 규탄하는 운동이 일어나자 프레디 머큐리의 가족은 쫓겨나다시피 영국으로 이주하였고 프레디는 1969년에 런던의 일링 칼리지에서 그래픽 디자인 학위를 받았다. 이 무렵 영국 시민권을 얻으면서 본명을 인도식 이름인\\xa0\\'파로크 불사라\\'에서 영어식으로 \\'프레드릭 벌사라\\'로 개명했다. 프레디는 퀸으로 데뷔하고 나서 본인의 이름을 프레디 머큐리로 개명하는데 대학시절에는 프레디 불사라라는 이름으로 그냥 썼다고 한다. 프레디는 그의 고향 진지바르 시절의 과거를 그리 좋아하지 않았다고 하는데 그에 관한 에피소드가 있다. 퀸의 전성기 때 공연 직후 잔지바르 시절의 프레디 동창들이 찾아왔는데 그들에게\\xa0알은 체를 하지 않았다고 한다. 또한 잔지바르에서의 어린시절이나 인도에서 유학하던 때의 이야기를 거의 하지 않았고 주변사람들에게도 인도식의 본명도 밝히지 않았다고 한다. \\xa0▲ 프레디 머큐리\\xa0머큐리 하우스 내부 벽에 걸려있는 사진 프레디가 고향 잔지바르를 그리 좋아하지 않았던 건 1964년에 잔지바르를 통치하던 오만의 아랍 정부가 아프리카 현지의\\xa0흑인들에 의해 전복되면서 아랍인들과 인도인들이\\xa0대거 재산을 몰수당했는데 프레디 머큐리의 가족들도 인도계였기 때문에 같은 이유로 쫓겨났던 일 때문이라고 한다.잔지바르에서는 언제부터인가 관광객들 중에서 퀸의 팬들이 \"프레디 머큐리가 태어난 집 어디예요?\"라고 물어 보았다고 한다. 당시 탄자니아나 잔지바르에서는 프레디 머큐리가 그렇게 유명한 사람인지 잘 몰랐다고 한다. 아무튼 프레디 머큐리가 대단히 유명한 사람이라는 게 알려지자 관광객을 유치하려고 서로들 자기 집이 그가 태어난 집이라고 홍보하거나 알려줘서 실제로 프레디가 태어난 집을 찾기 어렵다고 한다. 실제로 잔지바르에는 머큐리의 집이라고 하는 장소가 여럿 있다. 여러 집에서 머큐리의 집이라고 주장을 하는 데 정확한 곳은 아무도 모른다고 했다. 머큐리가 진짜 태어난 장소나 살던 곳에 대한 정부 차원의 공식적인 조사가 없기 때문이다. 그래서 잔지바르를 찾는 여행객들도 머큐리의 고향이라는 것을\\xa0모르고 지나치는 경우가 많다. 결국 머큐리의 발자취를 이곳에서 찾으려는 여행객에게는 실망스러울 수밖에 없다.\\xa0▲ 잔지바르\\xa0프레디 머큐리가 어린시절 보았을 집 앞 해변의 일몰 잔지바르의 무슬림들이 바라보는 머큐리의 이미지도\\xa0그리 우호적이지는 않다. 그 이유는 머큐리가 이곳에서 태어난 것은 맞지만 아버지가 식민지 총독부의 영국 관리로 왔기 때문에 진정한 잔지바르 인이라고 볼 수 없다는 것이다. 그리고 모든 가족이 나중에 영국으로 이주하였으며 프레디가 이슬람 교리에 어긋나는 동성애를 한 사실은\\xa0잔지바르 사람들의 정체성과 맞지 않다는 것이다.락 역사상 최고의 보컬이 누구인가에 대해서는 당연히 의견이 갈리지만 락에 가장 적합한 목소리가 누구의 것이냐는\\xa0질문에는 대개 프레디를 처음으로 꼽는 경우가 많다.\\xa045살의 짧은 생을 살다 갔지만 위대한 록음악의 전설을\\xa0만들어 냈던 프레디 머큐리는 잔지바르에서의 어린 시절을 어떻게 기억하고 있었을까? 에이즈로 죽기 전 프레디는 그를 사랑하는 팬들에게 다음과 같은 마지막 편지를 남긴다.\\'나는 무대에서는 늘 외롭지 않았다. 어쩌면 나는 나의 음악보다도 나의 팬들을 사랑했을지도 모른다. 지금 혼자 병마와 싸우고 있는 나의 몰골은 점점 더 왜소해지고 흉해져 간다. 지금 소원이 있다면 팬들은 제발 나의 마지막 죽어가는\\xa0모습이 아닌 나의 음악에 대한 열정을 기억 해줬으면 한다.\\xa0언제 떠날지는 모르지만 죽기 전까지 노래하고 싶다. 사랑하는 나의 팬들을 위해서.\\'▲ 머큐리 하우스\\xa0스톤타운 머큐리하우스 입구 \\n'"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "string"
+            }
+          },
+          "metadata": {},
+          "execution_count": 141
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 한글을 제외하고 전부 제거\n",
+        "test_sample = re.sub(r\"[^가-힣]\", \"\", test_sample)\n",
+        "test_sample"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 335
+        },
+        "id": "9DEyh0UsLAZZ",
+        "outputId": "82d7294f-89b9-4113-9e05-5c121bd3e019"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "'영화보헤미안랩소디를아이맥스스크린을통해관람했다실제콘서트현장에있는듯한기분이들정도로생생한분위기와현장감을담은공연장면의열기가아이맥스스크린을통해서더욱극대화되는느낌이들었다음악의꿈을키우며공항에서인부로일하다가전설의록밴드가된프레디머큐리와퀸의독창적인음악과화려한무대그리고그들의진짜이야기를담은영화이다퀸의명곡과더불어메인보컬프레디머큐리의화려한무대를아이맥스스크린로완벽하게담아냈다영화내내퀸의라이브공연을보고있는것같은착각이들정도로영상과음악의조화가잘이루어진영화이다영화의하이라이트는마지막장면의라이브에이드공연이다라이브에이드에서는퀸의모든것을보여주고영화를마무리한다보헤미안랩소디영화에서다루지않은프레디머큐리의출생과삶에대한이야기를추가하려한다영화를보지않았거나본관객들도알고나면더욱프레디머큐리삶에대한이해를넓힐수있을것이다아프리카탄자니아의잔지바르섬에서태어난프레디머큐리프레디머큐리는년영국의식민지였던잔지바르에서영국총독부공무원의남녀중장남으로태어났다어릴적이름은파로크불사라였다집안이나이름외모등을볼때전형적인영국인은아니었다그의아버지는인도국적을가졌으며오래전세기에이슬람교교도에쫓겨인도로피신한페르시아인조로아스터교신자의후손이었다어린시절을잔지바르에서보낸프레디머큐리는아버지의뜻에따라인도의뭄바이로가서년간기숙학교에다녔으며이때부터영어프레드릭의애칭인프레디라는이름을사용했다학창시절프레디는친구들과밴드를결성하였는데당시에는리드보컬을맡지않고키보드를연주했다년에잔지바르에서아랍인과인도인을규탄하는운동이일어나자프레디머큐리의가족은쫓겨나다시피영국으로이주하였고프레디는년에런던의일링칼리지에서그래픽디자인학위를받았다이무렵영국시민권을얻으면서본명을인도식이름인파로크불사라에서영어식으로프레드릭벌사라로개명했다프레디는퀸으로데뷔하고나서본인의이름을프레디머큐리로개명하는데대학시절에는프레디불사라라는이름으로그냥썼다고한다프레디는그의고향진지바르시절의과거를그리좋아하지않았다고하는데그에관한에피소드가있다퀸의전성기때공연직후잔지바르시절의프레디동창들이찾아왔는데그들에게알은체를하지않았다고한다또한잔지바르에서의어린시절이나인도에서유학하던때의이야기를거의하지않았고주변사람들에게도인도식의본명도밝히지않았다고한다프레디머큐리머큐리하우스내부벽에걸려있는사진프레디가고향잔지바르를그리좋아하지않았던건년에잔지바르를통치하던오만의아랍정부가아프리카현지의흑인들에의해전복되면서아랍인들과인도인들이대거재산을몰수당했는데프레디머큐리의가족들도인도계였기때문에같은이유로쫓겨났던일때문이라고한다잔지바르에서는언제부터인가관광객들중에서퀸의팬들이프레디머큐리가태어난집어디예요라고물어보았다고한다당시탄자니아나잔지바르에서는프레디머큐리가그렇게유명한사람인지잘몰랐다고한다아무튼프레디머큐리가대단히유명한사람이라는게알려지자관광객을유치하려고서로들자기집이그가태어난집이라고홍보하거나알려줘서실제로프레디가태어난집을찾기어렵다고한다실제로잔지바르에는머큐리의집이라고하는장소가여럿있다여러집에서머큐리의집이라고주장을하는데정확한곳은아무도모른다고했다머큐리가진짜태어난장소나살던곳에대한정부차원의공식적인조사가없기때문이다그래서잔지바르를찾는여행객들도머큐리의고향이라는것을모르고지나치는경우가많다결국머큐리의발자취를이곳에서찾으려는여행객에게는실망스러울수밖에없다잔지바르프레디머큐리가어린시절보았을집앞해변의일몰잔지바르의무슬림들이바라보는머큐리의이미지도그리우호적이지는않다그이유는머큐리가이곳에서태어난것은맞지만아버지가식민지총독부의영국관리로왔기때문에진정한잔지바르인이라고볼수없다는것이다그리고모든가족이나중에영국으로이주하였으며프레디가이슬람교리에어긋나는동성애를한사실은잔지바르사람들의정체성과맞지않다는것이다락역사상최고의보컬이누구인가에대해서는당연히의견이갈리지만락에가장적합한목소리가누구의것이냐는질문에는대개프레디를처음으로꼽는경우가많다살의짧은생을살다갔지만위대한록음악의전설을만들어냈던프레디머큐리는잔지바르에서의어린시절을어떻게기억하고있었을까에이즈로죽기전프레디는그를사랑하는팬들에게다음과같은마지막편지를남긴다나는무대에서는늘외롭지않았다어쩌면나는나의음악보다도나의팬들을사랑했을지도모른다지금혼자병마와싸우고있는나의몰골은점점더왜소해지고흉해져간다지금소원이있다면팬들은제발나의마지막죽어가는모습이아닌나의음악에대한열정을기억해줬으면한다언제떠날지는모르지만죽기전까지노래하고싶다사랑하는나의팬들을위해서머큐리하우스스톤타운머큐리하우스입구'"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "string"
+            }
+          },
+          "metadata": {},
+          "execution_count": 142
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 세 글자 이상의 명사만을 추출\n",
+        "\n",
+        "tokens = okt.nouns(test_sample)\n",
+        "cleaned_tokens = []\n",
+        "for word in tokens:\n",
+        "    if len(word) > 2:\n",
+        "        cleaned_tokens.append(word)\n",
+        "    else:\n",
+        "        pass\n",
+        "cleaned_review = \" \".join(cleaned_tokens)\n",
+        "\n",
+        "cleaned_review"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 204
+        },
+        "id": "RsC9B9V3LAc4",
+        "outputId": "9c1bb152-13ad-46ed-a27d-aeb41e94cc03"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "'보헤미안 랩소디 아이맥스 스크린 콘서트 분위기 공연장 아이맥스 스크린 프레디 머큐리 메인보컬 프레디 머큐리 아이맥스 스크린 라이브 하이라이트 마지막 라이브 라이브 마무리 보헤미안 랩소디 프레디 머큐리 이야기 프레디 머큐리 아프리카 탄자니아 잔지바르 프레디 머큐리 프레디 머큐리 식민지 잔지바르 총독부 공무원 영국인 아버지 이슬람교 페르시아인 조로아스터교 어린시절 잔지바르 프레디 머큐리 아버지 뭄바이 프레드릭 프레디 학창시절 프레디 리드보컬 잔지바르 아랍인 인도인 프레디 머큐리 프레디 칼리지 그래픽디자인 시민권 프레드릭 프레디 프레디 머큐리 대학시절 프레디 에피소드 전성기 잔지바르 프레디 알은체 잔지바르 어린시절 이야기 머큐리 머큐리 하우스 프레디 잔지바르 잔지바르 아프리카 아랍인 프레디 머큐리 잔지바르 관광객 프레디 머큐리 탄자니아 잔지바르 프레디 머큐리 프레디 머큐리 관광객 프레디 잔지바르 머큐리 머큐리 머큐리 잔지바르 여행객 머큐리 머큐리 발자취 여행객 잔지바르 프레디 머큐리 어린시절 잔지바르 무슬림 머큐리 이미지 머큐리 아버지 식민지 총독부 잔지바르 프레디 이슬람 동성애 잔지바르 역사상 목소리 프레디 록음악 프레디 머큐리 잔지바르 어린시절 에이즈 프레디 마지막 어쩌면 마지막 머큐리 하우스 머큐리 하우스'"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "string"
+            }
+          },
+          "metadata": {},
+          "execution_count": 143
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# TF-IDF 변환기에 데이터를 입력하여 변환\n",
+        "test_review_tfid = tfid.transform([cleaned_review])\n",
+        "\n",
+        "# 배열을 출력\n",
+        "print(test_review_tfid)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "QZchB5lxLAgG",
+        "outputId": "55e3f16c-c367-45fa-dea2-74402b37491c"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "  (0, 566)\t0.03749615035572346\n",
+            "  (0, 551)\t0.9748999092488099\n",
+            "  (0, 400)\t0.05338052328712721\n",
+            "  (0, 391)\t0.03749615035572346\n",
+            "  (0, 332)\t0.03389418745167017\n",
+            "  (0, 330)\t0.03749615035572346\n",
+            "  (0, 318)\t0.14155654851145444\n",
+            "  (0, 289)\t0.11248845106717036\n",
+            "  (0, 200)\t0.03389418745167017\n",
+            "  (0, 152)\t0.03538913712786361\n",
+            "  (0, 133)\t0.07912567120169033\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 로지스틱 회귀 모델을 활용하여 분류 예측\n",
+        "test_pred = lr.predict(test_review_tfid)[0]\n",
+        "print(\"분석 결과 {}적인 리뷰로 예측됩니다. \".format(\"긍정\" if test_pred > 0 else \"부정\"))\n",
+        "\n",
+        "# 첫 번째 리뷰는 극단적으로 긍정적인 리뷰이지만\n",
+        "# 전체적인 리뷰에 대한 총체적인 감정 분석은 부정적인 리뷰가 추출됨을 알 수 있음."
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "eaAr_dOJI6EX",
+        "outputId": "fb5c2f7d-e4fb-4d3d-dfed-686cf5716ffc"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "분석 결과 부정적인 리뷰로 예측됩니다. \n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [],
+      "metadata": {
+        "id": "ucqxN39s3x-o"
+      }
+    }
+  ]
+}
